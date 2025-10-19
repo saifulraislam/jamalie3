@@ -1,6 +1,8 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { MessageCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircle, ShoppingBag, Check } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
+import { Link } from 'react-router-dom';
 
 interface Product {
   id: number;
@@ -11,6 +13,21 @@ interface Product {
 }
 
 const ProductShowcase: React.FC = () => {
+  const { addToCart } = useCart();
+  const [addedToCart, setAddedToCart] = useState<number | null>(null);
+
+  const handleAddToCart = (product: Product) => {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: parseInt(product.price.replace('BDT ', '')),
+      image: product.image,
+    });
+
+    setAddedToCart(product.id);
+    setTimeout(() => setAddedToCart(null), 2000);
+  };
+
   const products: Product[] = [
     {
       id: 1,
@@ -104,47 +121,83 @@ const ProductShowcase: React.FC = () => {
               whileHover={{ y: -5 }}
               className="group bg-white rounded-lg overflow-hidden border border-[#D6C1A9]/30 hover:border-[#E2725B]/50 transition-all duration-300"
             >
-              {/* Product Image Container */}
-              <div className="relative overflow-hidden h-48 sm:h-56">
-                <motion.img
-                  src={product.image}
-                  alt={product.name}
-                  initial={{ scale: 1 }}
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.4 }}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                {/* Warm gradient overlay */}
-                <div 
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(rgba(226, 114, 91, 0.08), rgba(90, 30, 43, 0.15))'
-                  }}
-                />
-              </div>
+              <Link to={`/product/${product.id}`}>
+                <div className="relative overflow-hidden h-48 sm:h-56">
+                  <motion.img
+                    src={product.image}
+                    alt={product.name}
+                    initial={{ scale: 1 }}
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.4 }}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(rgba(226, 114, 91, 0.08), rgba(90, 30, 43, 0.15))'
+                    }}
+                  />
+                </div>
+              </Link>
 
               {/* Product Info */}
               <div className="p-4 text-center">
-                <h3 className="text-lg font-playfair font-semibold text-[#5A1E2B] mb-1 line-clamp-1">
-                  {product.name}
-                </h3>
+                <Link to={`/product/${product.id}`}>
+                  <h3 className="text-lg font-playfair font-semibold text-[#5A1E2B] mb-1 line-clamp-1 hover:text-[#E2725B] transition-colors">
+                    {product.name}
+                  </h3>
+                </Link>
                 <p className="text-base font-medium text-[#E2725B] mb-3">
                   {product.price}
                 </p>
 
-                {/* WhatsApp Button */}
-                <motion.a
-                  href={`https://wa.me/8801881445154?text=${encodeURIComponent(product.whatsappText)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="inline-flex items-center justify-center gap-1 border border-[#D6C1A9] text-[#5A1E2B] py-1.5 px-4 rounded-full font-inter font-light text-sm hover:bg-[#D6C1A9]/10 transition-all"
-                >
-                  <MessageCircle size={14} className="text-[#E2725B]" />
-                  <span>Order</span>
-                </motion.a>
+                <div className="flex gap-2">
+                  <motion.button
+                    onClick={() => handleAddToCart(product)}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1 inline-flex items-center justify-center gap-1 bg-[#5A1E2B] text-[#D6C1A9] py-1.5 px-3 rounded-full font-inter font-light text-sm hover:bg-[#5A1E2B]/90 transition-all relative overflow-hidden"
+                  >
+                    <AnimatePresence mode="wait">
+                      {addedToCart === product.id ? (
+                        <motion.span
+                          key="added"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="flex items-center gap-1"
+                        >
+                          <Check size={14} />
+                          <span>Added</span>
+                        </motion.span>
+                      ) : (
+                        <motion.span
+                          key="add"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="flex items-center gap-1"
+                        >
+                          <ShoppingBag size={14} />
+                          <span>Add</span>
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+
+                  <motion.a
+                    href={`https://wa.me/8801881445154?text=${encodeURIComponent(product.whatsappText)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="inline-flex items-center justify-center border border-[#D6C1A9] text-[#5A1E2B] p-1.5 rounded-full hover:bg-[#D6C1A9]/10 transition-all"
+                    title="Order via WhatsApp"
+                  >
+                    <MessageCircle size={14} className="text-[#E2725B]" />
+                  </motion.a>
+                </div>
               </div>
             </motion.div>
           ))}

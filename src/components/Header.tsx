@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Instagram } from 'lucide-react';
+import { Menu, X, Instagram, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCart } from '../contexts/CartContext';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -48,6 +49,9 @@ const Header: React.FC = () => {
       document.body.style.overflow = '';
     }
   }, [isMenuOpen]);
+
+  const { getCartItemCount } = useCart();
+  const cartItemCount = getCartItemCount();
 
   const navItems = [
     { href: '/', label: 'Home' },
@@ -107,29 +111,66 @@ const Header: React.FC = () => {
                 </Link>
               </motion.div>
             ))}
+
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link
+                to="/cart"
+                className="relative inline-flex items-center justify-center text-[#5A1E2B]"
+              >
+                <ShoppingBag size={22} />
+                {cartItemCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-2 -right-2 bg-[#E2725B] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center"
+                  >
+                    {cartItemCount}
+                  </motion.span>
+                )}
+              </Link>
+            </motion.div>
           </nav>
 
-          {/* Mobile Menu Button */}
-          <motion.button
-            ref={buttonRef}
-            whileTap={{ scale: 0.9 }}
-            onClick={toggleMenu}
-            className="lg:hidden text-[#5A1E2B] p-2 relative z-50"
-            aria-label="Toggle menu"
-            style={{
-              minWidth: '44px',
-              minHeight: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {isMenuOpen ? (
-              <X size={24} className="text-[#5A1E2B]" />
-            ) : (
-              <Menu size={24} className="text-[#5A1E2B]" />
-            )}
-          </motion.button>
+          <div className="lg:hidden flex items-center gap-4">
+            <motion.div whileTap={{ scale: 0.9 }}>
+              <Link
+                to="/cart"
+                className="relative inline-flex items-center justify-center text-[#5A1E2B] p-2"
+              >
+                <ShoppingBag size={22} />
+                {cartItemCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 bg-[#E2725B] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center"
+                  >
+                    {cartItemCount}
+                  </motion.span>
+                )}
+              </Link>
+            </motion.div>
+
+            <motion.button
+              ref={buttonRef}
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleMenu}
+              className="text-[#5A1E2B] p-2 relative z-50"
+              aria-label="Toggle menu"
+              style={{
+                minWidth: '44px',
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isMenuOpen ? (
+                <X size={24} className="text-[#5A1E2B]" />
+              ) : (
+                <Menu size={24} className="text-[#5A1E2B]" />
+              )}
+            </motion.button>
+          </div>
         </div>
 
         {/* Mobile Menu */}

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { MessageCircle, Grid, List } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircle, Grid, List, ShoppingBag, Check } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
+import { Link } from 'react-router-dom';
 
 interface Product {
   id: number;
@@ -15,6 +17,20 @@ interface Product {
 const CollectionPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const { addToCart } = useCart();
+  const [addedToCart, setAddedToCart] = useState<number | null>(null);
+
+  const handleAddToCart = (product: Product) => {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: parseInt(product.price.replace('BDT ', '')),
+      image: product.image,
+    });
+
+    setAddedToCart(product.id);
+    setTimeout(() => setAddedToCart(null), 2000);
+  };
 
   const products: Product[] = [
     {
@@ -168,29 +184,32 @@ const CollectionPage: React.FC = () => {
                   viewMode === 'list' ? 'flex flex-col md:flex-row' : ''
                 }`}
               >
-                {/* Product Image */}
-                <div className={`relative overflow-hidden ${
-                  viewMode === 'list' 
-                    ? 'h-48 md:h-56 md:w-56 flex-shrink-0' 
-                    : 'h-48 sm:h-56'
-                }`}>
-                  <motion.img
-                    src={product.image}
-                    alt={product.name}
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.4 }}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/10" />
-                </div>
+                <Link to={`/product/${product.id}`}>
+                  <div className={`relative overflow-hidden ${
+                    viewMode === 'list'
+                      ? 'h-48 md:h-56 md:w-56 flex-shrink-0'
+                      : 'h-48 sm:h-56'
+                  }`}>
+                    <motion.img
+                      src={product.image}
+                      alt={product.name}
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.4 }}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/10" />
+                  </div>
+                </Link>
 
                 {/* Product Info */}
                 <div className={`p-4 ${viewMode === 'list' ? 'flex-1 flex flex-col justify-between' : ''}`}>
                   <div>
-                    <h3 className="text-lg font-playfair font-semibold text-[#5A1E2B] mb-1">
-                      {product.name}
-                    </h3>
+                    <Link to={`/product/${product.id}`}>
+                      <h3 className="text-lg font-playfair font-semibold text-[#5A1E2B] mb-1 hover:text-[#E2725B] transition-colors">
+                        {product.name}
+                      </h3>
+                    </Link>
                     <p className="text-xs sm:text-sm font-inter font-light text-[#5A1E2B]/80 mb-2 line-clamp-2">
                       {product.description}
                     </p>
@@ -199,19 +218,53 @@ const CollectionPage: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* WhatsApp Button */}
-                  <motion.a
-                    href={`https://wa.me/8801881445154?text=${encodeURIComponent(product.whatsappText)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex items-center justify-center gap-1 border border-[#D6C1A9] text-[#5A1E2B] py-1.5 px-3 rounded-full font-inter font-light text-xs sm:text-sm hover:bg-[#D6C1A9]/10 transition-all"
-                  >
-                    <MessageCircle size={14} className="text-[#E2725B]" />
-                    <span className="hidden sm:inline">Order via WhatsApp</span>
-                    <span className="sm:hidden">Order</span>
-                  </motion.a>
+                  <div className="flex gap-2">
+                    <motion.button
+                      onClick={() => handleAddToCart(product)}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex-1 inline-flex items-center justify-center gap-1 bg-[#5A1E2B] text-[#D6C1A9] py-1.5 px-3 rounded-full font-inter font-light text-xs sm:text-sm hover:bg-[#5A1E2B]/90 transition-all"
+                    >
+                      <AnimatePresence mode="wait">
+                        {addedToCart === product.id ? (
+                          <motion.span
+                            key="added"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="flex items-center gap-1"
+                          >
+                            <Check size={14} />
+                            <span>Added</span>
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="add"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="flex items-center gap-1"
+                          >
+                            <ShoppingBag size={14} />
+                            <span className="hidden sm:inline">Add to Cart</span>
+                            <span className="sm:hidden">Add</span>
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
+
+                    <motion.a
+                      href={`https://wa.me/8801881445154?text=${encodeURIComponent(product.whatsappText)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="inline-flex items-center justify-center border border-[#D6C1A9] text-[#5A1E2B] p-1.5 rounded-full hover:bg-[#D6C1A9]/10 transition-all"
+                      title="Order via WhatsApp"
+                    >
+                      <MessageCircle size={14} className="text-[#E2725B]" />
+                    </motion.a>
+                  </div>
                 </div>
               </motion.div>
             ))}
