@@ -37,7 +37,7 @@ const CollectionPage: React.FC = () => {
       id: 1,
       name: "Solace Time Keep Journal",
       price: "BDT 850",
-      image: "jour (1).jpeg",
+      image: "bellydance.png",
       category: "journals",
       description: "Handcrafted leather-bound journal with gold foil detailing",
       whatsappText: "I'm interested in Solace Time Keep Journal"
