@@ -33,7 +33,7 @@ const ProductShowcase: React.FC = () => {
       id: 1,
       name: "Solace Time Keep Journal",
       price: "BDT 850",
-      image: "jour (1).jpeg",
+      image: "bellydance.png",
       whatsappText: "I'm interested in Solace Time Keep Journal"
     },
     {
