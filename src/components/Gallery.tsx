@@ -1,358 +1,355 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 
-interface GalleryItem {
+interface StoryItem {
   id: number;
   image: string;
   caption: string;
 }
 
-const Gallery: React.FC = () => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isHovering, setIsHovering] = useState(false);
-  
-  // Enhanced motion values for smoother interactions
-  const x = useMotionValue(0);
-  const background = useTransform(
-    x,
-    [-100, 0, 100],
-    ["#F5F0E8", "#F8F4ED", "#F5F0E8"]
-  );
+const InstagramStoryGallery: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [touchStart, setTouchStart] = useState(0);
+  const intervalRef = useRef<number | null>(null);
 
-  const galleryItems: GalleryItem[] = [
-    {
-      id: 1,
-      image: "story (5).jpg",
-      caption: "Moodboard"
-    },
-    {
-      id: 2,
-      image: "story (3).jpg",
-      caption: "Behind the Brand"
-    },
-    {
-      id: 3,
-      image: "story (4).jpg",
-      caption: "Inspo"
-    },
-    {
-      id: 4,
-      image: "story(6).jpg",
-      caption: "Lookbook"
-    },
-    {
-      id: 5,
-      image: "story (1).jpg",
-      caption: "Textures"
-    },
-    {
-      id: 6,
-      image: "story (2).jpg",
-      caption: "Craftsmanship"
-    }
+  const stories: StoryItem[] = [
+    { id: 1, image: "story (5).jpg", caption: "Moodboard" },
+    { id: 2, image: "story (3).jpg", caption: "Behind the Brand" },
+    { id: 3, image: "story (4).jpg", caption: "Inspo" },
+    { id: 4, image: "story(6).jpg", caption: "Lookbook" },
+    { id: 5, image: "story (1).jpg", caption: "Textures" },
+    { id: 6, image: "story (2).jpg", caption: "Craftsmanship" }
   ];
 
-  const checkScrollButtons = useCallback(() => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 5);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
-      
-      // Calculate active index based on scroll position
-      const itemWidth = window.innerWidth < 768 ? 304 : 352; // card width + gap
-      const newIndex = Math.round(scrollLeft / itemWidth);
-      setActiveIndex(Math.min(newIndex, galleryItems.length - 1));
-    }
-  }, [galleryItems.length]);
-
-  useEffect(() => {
-    checkScrollButtons();
-    const scrollElement = scrollRef.current;
-    if (scrollElement) {
-      scrollElement.addEventListener('scroll', checkScrollButtons, { passive: true });
-      return () => scrollElement.removeEventListener('scroll', checkScrollButtons);
-    }
-  }, [checkScrollButtons]);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const isMobile = window.innerWidth < 768;
-      const scrollAmount = isMobile ? 304 : 352; // Precise card width + gap
-      const currentScroll = scrollRef.current.scrollLeft;
-      const targetScroll = direction === 'left' 
-        ? currentScroll - scrollAmount 
-        : currentScroll + scrollAmount;
-      
-      scrollRef.current.scrollTo({
-        left: targetScroll,
-        behavior: 'smooth'
-      });
+  const handleNext = () => {
+    if (currentIndex < stories.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setProgress(0);
+    } else {
+      setIsOpen(false);
+      setCurrentIndex(0);
+      setProgress(0);
     }
   };
 
-  const scrollToIndex = (index: number) => {
-    if (scrollRef.current) {
-      const isMobile = window.innerWidth < 768;
-      const scrollAmount = isMobile ? 304 : 352;
-      const targetScroll = index * scrollAmount;
-      
-      scrollRef.current.scrollTo({
-        left: targetScroll,
-        behavior: 'smooth'
-      });
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+      setProgress(0);
     }
   };
 
-  // Auto-scroll functionality for premium feel (optional)
-  useEffect(() => {
-    if (isHovering) return;
-    
-    const autoScroll = setInterval(() => {
-      if (canScrollRight) {
-        scroll('right');
-      } else if (activeIndex === galleryItems.length - 1) {
-        scrollToIndex(0);
+  const openStory = (index: number) => {
+    setCurrentIndex(index);
+    setIsOpen(true);
+    setProgress(0);
+    setIsPaused(false);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setCurrentIndex(0);
+    setProgress(0);
+    setIsPaused(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart - touchEnd;
+
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        handleNext();
+      } else {
+        handlePrev();
       }
-    }, 5000);
+    }
+  };
 
-    return () => clearInterval(autoScroll);
-  }, [canScrollRight, activeIndex, isHovering, galleryItems.length]);
+  const handleScreenClick = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+
+    if (x < width / 3) {
+      handlePrev();
+    } else if (x > (width * 2) / 3) {
+      handleNext();
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen || isPaused) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
+
+    intervalRef.current = window.setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          handleNext();
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, 50);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [isOpen, isPaused, currentIndex]);
 
   return (
-    <motion.section 
+    <section 
       id="gallery" 
-      className="py-16 md:py-24 lg:py-28 relative overflow-hidden"
-      style={{ backgroundColor: background }}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-28 relative overflow-hidden"
+      style={{ backgroundColor: '#F8F4ED' }}
     >
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0 opacity-5">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-[#5A1E2B]/10 via-transparent to-[#E2725B]/10" />
       </div>
 
-      <div className="container mx-auto px-4 lg:px-8 relative z-10">
-        {/* Enhanced Section Header */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Section Header */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, ease: [0.25, 0.25, 0, 1] }}
-          className="text-center mb-16 md:mb-20"
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="text-center mb-12 sm:mb-16 md:mb-20"
         >
-          <motion.h2 
-            className="text-4xl md:text-5xl lg:text-6xl font-playfair font-bold text-[#5A1E2B] mb-6 tracking-tight leading-[0.9]"
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, delay: 0.2 }}
-          >
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-[#5A1E2B] mb-4 sm:mb-6 tracking-tight leading-tight">
             Jamaliè
-            <motion.span 
-              className="text-[#D6C1A9] block mt-2"
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
-              Aesthetics
-            </motion.span>
-          </motion.h2>
+            <span className="text-[#D6C1A9] block mt-1 sm:mt-2">Aesthetics</span>
+          </h2>
           
-          <motion.p 
-            className="text-base md:text-lg font-inter font-light text-[#5A1E2B]/80 max-w-3xl mx-auto px-4 leading-relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-          >
+          <p className="text-sm sm:text-base md:text-lg text-[#5A1E2B]/80 max-w-2xl mx-auto px-4 leading-relaxed">
             A glimpse into our creative process and the inspiration behind our timeless collections.
-          </motion.p>
+          </p>
           
-          <motion.div 
-            className="w-24 h-px bg-gradient-to-r from-transparent via-[#D6C1A9] to-transparent my-8 mx-auto"
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            transition={{ duration: 1, delay: 0.8 }}
-          />
+          <div className="w-16 sm:w-20 md:w-24 h-px bg-gradient-to-r from-transparent via-[#D6C1A9] to-transparent my-6 sm:my-8 mx-auto" />
         </motion.div>
 
-        {/* Gallery Container */}
-        <div className="relative">
-          {/* Enhanced Navigation Buttons */}
-          <div className="hidden md:flex absolute top-1/2 -translate-y-1/2 left-0 right-0 justify-between pointer-events-none z-20 px-4">
-            <motion.button
-              onClick={() => scroll('left')}
-              whileHover={{ scale: 1.1, x: -5 }}
-              whileTap={{ scale: 0.95 }}
-              disabled={!canScrollLeft}
-              className={`pointer-events-auto p-4 rounded-full backdrop-blur-md border transition-all duration-500 shadow-xl ${
-                canScrollLeft 
-                  ? 'bg-white/90 text-[#5A1E2B] border-[#D6C1A9]/50 hover:bg-[#5A1E2B] hover:text-[#D6C1A9] hover:border-[#5A1E2B]' 
-                  : 'bg-white/30 text-[#5A1E2B]/30 border-[#D6C1A9]/20 cursor-not-allowed'
-              }`}
-            >
-              <ChevronLeft size={24} />
-            </motion.button>
-            
-            <motion.button
-              onClick={() => scroll('right')}
-              whileHover={{ scale: 1.1, x: 5 }}
-              whileTap={{ scale: 0.95 }}
-              disabled={!canScrollRight}
-              className={`pointer-events-auto p-4 rounded-full backdrop-blur-md border transition-all duration-500 shadow-xl ${
-                canScrollRight 
-                  ? 'bg-white/90 text-[#5A1E2B] border-[#D6C1A9]/50 hover:bg-[#5A1E2B] hover:text-[#D6C1A9] hover:border-[#5A1E2B]' 
-                  : 'bg-white/30 text-[#5A1E2B]/30 border-[#D6C1A9]/20 cursor-not-allowed'
-              }`}
-            >
-              <ChevronRight size={24} />
-            </motion.button>
-          </div>
-
-          {/* Mobile Navigation */}
-          <div className="flex justify-center gap-4 mb-8 md:hidden">
-            <motion.button
-              onClick={() => scroll('left')}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              disabled={!canScrollLeft}
-              className={`p-3 rounded-full transition-all duration-300 ${
-                canScrollLeft 
-                  ? 'bg-[#5A1E2B] text-[#D6C1A9] shadow-lg' 
-                  : 'bg-[#D6C1A9]/30 text-[#5A1E2B]/40 cursor-not-allowed'
-              }`}
-            >
-              <ChevronLeft size={20} />
-            </motion.button>
-            
-            <motion.button
-              onClick={() => scroll('right')}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              disabled={!canScrollRight}
-              className={`p-3 rounded-full transition-all duration-300 ${
-                canScrollRight 
-                  ? 'bg-[#5A1E2B] text-[#D6C1A9] shadow-lg' 
-                  : 'bg-[#D6C1A9]/30 text-[#5A1E2B]/40 cursor-not-allowed'
-              }`}
-            >
-              <ChevronRight size={20} />
-            </motion.button>
-          </div>
-
-          {/* Enhanced Gallery Scroll */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, ease: [0.25, 0.25, 0, 1] }}
-            ref={scrollRef}
-            className="flex gap-6 md:gap-8 overflow-x-auto pb-6 gallery-scroll snap-x snap-mandatory scrollbar-hide"
-            style={{ 
-              scrollbarWidth: 'none', 
+        {/* Story Strip - Horizontal Scroll */}
+        <div className="relative -mx-4 sm:mx-0">
+          {/* Scrollable Container */}
+          <div 
+            className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 px-4 sm:px-0 snap-x snap-mandatory scrollbar-hide max-w-7xl mx-auto"
+            style={{
+              scrollbarWidth: 'none',
               msOverflowStyle: 'none',
               WebkitOverflowScrolling: 'touch'
             }}
           >
-            {galleryItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ 
-                  duration: 0.7, 
-                  delay: index * 0.15,
-                  ease: [0.25, 0.25, 0, 1]
-                }}
-                whileHover={{ 
-                  y: -8, 
-                  scale: 1.02,
-                  transition: { duration: 0.4, ease: [0.25, 0.25, 0, 1] }
-                }}
-                whileTap={{ scale: 0.98 }}
-                className="flex-shrink-0 w-72 h-96 md:w-80 md:h-[28rem] lg:w-96 lg:h-[32rem] relative rounded-2xl overflow-hidden border border-white/50 hover:border-[#E2725B]/60 transition-all duration-500 snap-start group touch-manipulation shadow-xl hover:shadow-2xl backdrop-blur-sm"
-              >
-                {/* Enhanced Image with Parallax Effect */}
-                <motion.img
-                  src={item.image}
-                  alt={item.caption}
-                  className="w-full h-full object-cover transition-transform duration-700 ease-out"
-                  whileHover={{ scale: 1.08 }}
-                  loading="lazy"
-                />
-                
-                {/* Enhanced Overlay with Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-500" />
-                
-                {/* Premium Caption */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                  <motion.h3
-                    initial={{ y: 30, opacity: 0 }}
-                    whileInView={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                    className="text-white text-xl md:text-2xl lg:text-3xl font-playfair font-semibold text-center tracking-wide"
-                  >
-                    {item.caption}
-                  </motion.h3>
-                  
-                  {/* Elegant underline */}
-                  <motion.div
-                    initial={{ scaleX: 0 }}
-                    whileInView={{ scaleX: 1 }}
-                    transition={{ duration: 0.8, delay: 0.5 }}
-                    className="w-12 h-px bg-[#D6C1A9] mx-auto mt-3"
-                  />
-                </div>
-
-                {/* Subtle Decorative Elements */}
-                <motion.div 
-                  className="absolute top-3 right-3 md:top-6 md:right-6 w-3 h-3 md:w-6 md:h-6 border border-[#D6C1A9]/60 md:border-2 md:border-[#D6C1A9] rounded-full"
-                  initial={{ scale: 0, rotate: -180 }}
-                  whileInView={{ scale: 1, rotate: 0 }}
-                  transition={{ duration: 0.6, delay: 0.4 }}
-                  whileHover={{ scale: window.innerWidth >= 768 ? 1.2 : 1.1, rotate: 90 }}
-                />
-                
-                <motion.div 
-                  className="absolute bottom-3 left-3 md:bottom-6 md:left-6 w-2 h-2 md:w-4 md:h-4 border border-[#E2725B]/60 md:border-2 md:border-[#E2725B] rounded-full"
-                  initial={{ scale: 0, rotate: 180 }}
-                  whileInView={{ scale: 1, rotate: 0 }}
-                  transition={{ duration: 0.6, delay: 0.6 }}
-                  whileHover={{ scale: window.innerWidth >= 768 ? 1.3 : 1.1, rotate: -90 }}
-                />
-
-                {/* Hover overlay effect */}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-[#5A1E2B]/20 to-[#E2725B]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  initial={false}
-                />
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Tiny Gallery Indicators */}
-          <div className="flex justify-center mt-8 md:mt-12 space-x-1.5 md:space-x-3">
-            {galleryItems.map((_, index) => (
+            {stories.map((story, index) => (
               <motion.button
-                key={index}
-                onClick={() => scrollToIndex(index)}
-                whileHover={{ scale: window.innerWidth >= 768 ? 1.4 : 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className={`transition-all duration-400 rounded-full cursor-pointer ${
-                  index === activeIndex 
-                    ? 'w-3 h-1 md:w-8 md:h-2 bg-[#E2725B]' 
-                    : 'w-1 h-1 md:w-2 md:h-2 bg-[#5A1E2B]/20 hover:bg-[#E2725B]/40'
-                }`}
-              />
+                key={story.id}
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ 
+                  duration: 0.4, 
+                  delay: index * 0.08,
+                  ease: [0.25, 0.46, 0.45, 0.94]
+                }}
+                whileHover={{ scale: 1.05, y: -4 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => openStory(index)}
+                className="relative flex-shrink-0 w-28 h-48 sm:w-32 sm:h-56 md:w-36 md:h-64 lg:w-40 lg:h-72 rounded-xl sm:rounded-2xl overflow-hidden cursor-pointer group focus:outline-none focus:ring-2 focus:ring-[#E2725B] focus:ring-offset-2 focus:ring-offset-[#F8F4ED] snap-start"
+              >
+                {/* Gradient Ring Border */}
+                <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-[#E2725B] via-[#D6C1A9] to-[#5A1E2B] p-[2px] sm:p-[3px] group-hover:p-[3px] sm:group-hover:p-[4px] transition-all duration-300">
+                  <div className="w-full h-full rounded-xl sm:rounded-2xl overflow-hidden bg-white relative">
+                    <img
+                      src={story.image}
+                      alt={story.caption}
+                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                      loading="lazy"
+                    />
+                    
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                    
+                    {/* Caption */}
+                    <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 md:p-4">
+                      <p className="text-white text-xs sm:text-sm md:text-base font-medium text-center drop-shadow-lg">
+                        {story.caption}
+                      </p>
+                    </div>
+
+                    {/* Play Indicator */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <Play size={20} className="text-white ml-1" fill="white" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.button>
             ))}
           </div>
         </div>
       </div>
-    </motion.section>
+
+      {/* Story Viewer Modal */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black z-50 flex items-center justify-center"
+            style={{ touchAction: 'pan-y' }}
+          >
+            {/* Progress Bars */}
+            <div className="absolute top-0 left-0 right-0 flex gap-1 sm:gap-1.5 p-2 sm:p-3 md:p-4 z-30 max-w-2xl mx-auto w-full">
+              {stories.map((_, index) => (
+                <div key={index} className="flex-1 h-0.5 sm:h-1 bg-white/30 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-white rounded-full"
+                    style={{
+                      width: index < currentIndex ? '100%' : index === currentIndex ? `${progress}%` : '0%'
+                    }}
+                    transition={{ duration: 0.05, ease: "linear" }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Header */}
+            <div className="absolute top-0 left-0 right-0 pt-10 sm:pt-12 md:pt-14 pb-4 px-3 sm:px-4 md:px-6 bg-gradient-to-b from-black/60 to-transparent z-20 max-w-2xl mx-auto w-full">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-[#E2725B] to-[#D6C1A9] p-[2px]">
+                    <div className="w-full h-full rounded-full bg-[#5A1E2B] flex items-center justify-center text-white font-serif font-bold text-xs sm:text-sm">
+                      J
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold text-sm sm:text-base">Jamaliè</p>
+                    <p className="text-white/80 text-xs sm:text-sm">{stories[currentIndex].caption}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <button
+                    onClick={() => setIsPaused(!isPaused)}
+                    className="text-white p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors active:scale-95"
+                    aria-label={isPaused ? "Play" : "Pause"}
+                  >
+                    {isPaused ? <Play size={18} className="sm:w-5 sm:h-5" /> : <Pause size={18} className="sm:w-5 sm:h-5" />}
+                  </button>
+                  <button
+                    onClick={handleClose}
+                    className="text-white p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors active:scale-95"
+                    aria-label="Close"
+                  >
+                    <X size={22} className="sm:w-6 sm:h-6" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Story Content Container */}
+            <div 
+              className="relative w-full h-full max-w-2xl mx-auto flex items-center justify-center"
+              onClick={handleScreenClick}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.img
+                  key={currentIndex}
+                  src={stories[currentIndex].image}
+                  alt={stories[currentIndex].caption}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                  className="w-full h-full object-contain select-none"
+                  draggable={false}
+                />
+              </AnimatePresence>
+
+              {/* Click Zone Indicators (Desktop Only) */}
+              <div className="hidden md:flex absolute inset-0 pointer-events-none">
+                <div className="w-1/3 h-full" />
+                <div className="w-1/3 h-full" />
+                <div className="w-1/3 h-full" />
+              </div>
+            </div>
+
+            {/* Desktop Navigation Buttons */}
+            <div className="hidden md:flex absolute inset-y-0 left-0 right-0 items-center justify-between px-4 lg:px-6 pointer-events-none z-20 max-w-3xl mx-auto w-full">
+              <button
+                onClick={handlePrev}
+                disabled={currentIndex === 0}
+                className={`pointer-events-auto p-2 lg:p-3 rounded-full backdrop-blur-md transition-all ${
+                  currentIndex === 0
+                    ? 'opacity-0 cursor-not-allowed'
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+                aria-label="Previous story"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              
+              <button
+                onClick={handleNext}
+                className="pointer-events-auto p-2 lg:p-3 rounded-full backdrop-blur-md bg-white/10 hover:bg-white/20 text-white transition-all"
+                aria-label="Next story"
+              >
+                <ChevronRight size={24} />
+              </button>
+            </div>
+
+            {/* Caption Overlay */}
+            <div className="absolute bottom-0 left-0 right-0 pb-6 sm:pb-8 md:pb-10 px-4 sm:px-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10 pointer-events-none max-w-2xl mx-auto w-full">
+              <AnimatePresence mode="wait">
+                <motion.h3
+                  key={currentIndex}
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -20, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-serif font-semibold text-center drop-shadow-2xl"
+                >
+                  {stories[currentIndex].caption}
+                </motion.h3>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Hide Scrollbar */}
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
+    </section>
   );
 };
 
-export default Gallery;
+export default InstagramStoryGallery;
