@@ -17,12 +17,12 @@ const InstagramStoryGallery: React.FC = () => {
   const intervalRef = useRef<number | null>(null);
 
   const stories: StoryItem[] = [
-    { id: 1, image: "story (5).jpg", caption: "Moodboard" },
-    { id: 2, image: "story (3).jpg", caption: "Behind the Brand" },
-    { id: 3, image: "story (4).jpg", caption: "Inspo" },
-    { id: 4, image: "story(6).jpg", caption: "Lookbook" },
-    { id: 5, image: "story (1).jpg", caption: "Textures" },
-    { id: 6, image: "story (2).jpg", caption: "Craftsmanship" }
+    { id: 1, image: "storyofjamalie1.webp", caption: "First Light" },
+    { id: 2, image: "storyofjamalie2.webp", caption: "Handbound" },
+    { id: 3, image: "storyofjamalie3.webp", caption: "Sheer Contemplation" },
+    { id: 4, image: "storyofjamalie4.webp", caption: "Nightfall Pages" },
+    { id: 5, image: "storyofjamalie5.webp", caption: "Garden Sanctuary" },
+    { id: 6, image: "storyofjamalie6.webp", caption: "Craftsmanship" }
   ];
 
   const handleNext = () => {
